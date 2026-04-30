@@ -89,3 +89,29 @@ writer = Agent(
     temperature=0.7,
     max_tokens=1200,
 )
+
+
+JUDGE_PROMPT = """You are an editor reviewing a children's bedtime story for kids aged 5-10.
+
+Evaluate the draft against this rubric:
+1. Structure — bedtime-tuned three-act: gentle setup, mild conflict (low stakes, no fear or danger), soothing resolution.
+2. Vocabulary — age-appropriate words. No complex or rare terms.
+3. Sentences — short and simple. Avoid long subordinate clauses.
+4. Calming ending — the final paragraph should feel like a lullaby, with cozy wind-down language ("safe", "cozy", "snuggled", "dream", "asleep").
+5. Length — approximately 500-600 words.
+
+Approve drafts that broadly meet the rubric. Reject only when there are clear, specific issues to fix.
+
+Respond with a JSON object exactly matching this shape:
+{"pass": <true|false>, "feedback": "<short, specific guidance>"}
+
+On pass: feedback can be empty.
+On fail: feedback must name the specific issues (which rubric items, where in the draft) and tell the writer what to change. Keep it under three sentences.
+"""
+
+judge = Agent(
+    system_prompt=JUDGE_PROMPT,
+    temperature=0.3,
+    max_tokens=600,
+    response_format={"type": "json_object"},
+)
