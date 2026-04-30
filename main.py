@@ -36,40 +36,86 @@ def writer_judge_loop(writer_messages, judge_messages, user_prompt_history):
 
 
 def main():
-    user_input = input("What kind of story do you want to hear? ")
+    while True:
+        user_input = input("What kind of story do you want to hear? ")
 
-    print("Validating your request...")
-    raw = validator.run([{"role": "user", "content": f"INITIAL\n{user_input}"}])
-    result = json.loads(raw)
-    if not result["pass"]:
-        print(f"Hmm, I couldn't help with that — {result['feedback']}")
-        return
+        print("Validating your request...")
+        raw = validator.run([{"role": "user", "content": f"INITIAL\n{user_input}"}])
+        result = json.loads(raw)
+        if not result["pass"]:
+            print(f"Hmm, I couldn't help with that — {result['feedback']}")
+            continue
 
-    print("Checking content is age-appropriate...")
-    raw = censor.run([{"role": "user", "content": f"REQUEST: {user_input}"}])
-    result = json.loads(raw)
-    if not result["pass"]:
-        print(f"Hmm, I couldn't help with that — {result['feedback']} How about: \"{result['alternate']}\"?")
-        return
+        print("Checking content is age-appropriate...")
+        raw = censor.run([{"role": "user", "content": f"REQUEST: {user_input}"}])
+        result = json.loads(raw)
+        if not result["pass"]:
+            print(f"Hmm, I couldn't help with that — {result['feedback']} How about: \"{result['alternate']}\"?")
+            continue
 
-    print("Writing the story...")
-    user_prompt_history = [user_input]
-    writer_messages = [{"role": "user", "content": user_input}]
-    judge_messages = []
-    story = writer_judge_loop(writer_messages, judge_messages, user_prompt_history)
+        print("Writing the story...")
+        user_prompt_history = [user_input]
+        writer_messages = [{"role": "user", "content": user_input}]
+        judge_messages = []
+        story = writer_judge_loop(writer_messages, judge_messages, user_prompt_history)
 
-    if story is None:
-        print("Could not generate a story for that prompt; please try a different one.")
-        return
+        if story is None:
+            print("Could not generate a story for that prompt; please try a different one.")
+            continue
 
-    print("Final safety check on the story...")
-    raw = censor.run([{"role": "user", "content": f"STORY: {story}"}])
-    result = json.loads(raw)
-    if not result["pass"]:
-        print("Could not generate a story for that prompt; please try a different one.")
-        return
+        print("Final safety check on the story...")
+        raw = censor.run([{"role": "user", "content": f"STORY: {story}"}])
+        result = json.loads(raw)
+        if not result["pass"]:
+            print("Could not generate a story for that prompt; please try a different one.")
+            continue
 
-    print(story)
+        print(story)
+        current_story = story
+
+        while True:
+            nxt = input("\nAny changes, or type '/new' to start a fresh story? ")
+            if nxt.strip() == "/new":
+                break
+
+            print("Validating your revision...")
+            validator_input = f"REVISION\nCurrent story:\n{current_story}\n\nUser request:\n{nxt}"
+            raw = validator.run([{"role": "user", "content": validator_input}])
+            result = json.loads(raw)
+            if not result["pass"]:
+                print(f"Hmm, I couldn't help with that — {result['feedback']}")
+                continue
+
+            print("Checking content is age-appropriate...")
+            raw = censor.run([{"role": "user", "content": f"REQUEST: {nxt}"}])
+            result = json.loads(raw)
+            if not result["pass"]:
+                print(f"Hmm, I couldn't help with that — {result['feedback']} How about: \"{result['alternate']}\"?")
+                continue
+
+            user_prompt_history.append(nxt)
+            writer_messages = [
+                {"role": "user", "content": user_prompt_history[0]},
+                {"role": "assistant", "content": current_story},
+                {"role": "user", "content": f"Revise the story: {nxt}"},
+            ]
+
+            print("Revising the story...")
+            story = writer_judge_loop(writer_messages, judge_messages, user_prompt_history)
+
+            if story is None:
+                print("Could not generate this revision; the previous story still stands. Try a different revision.")
+                continue
+
+            print("Final safety check on the revised story...")
+            raw = censor.run([{"role": "user", "content": f"STORY: {story}"}])
+            result = json.loads(raw)
+            if not result["pass"]:
+                print("Could not generate this revision; the previous story still stands. Try a different revision.")
+                continue
+
+            print(story)
+            current_story = story
 
 if __name__ == "__main__":
     main()
