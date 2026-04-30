@@ -21,7 +21,7 @@ def main():
         return
 
     print("Checking content is age-appropriate...")
-    raw = censor.run([{"role": "user", "content": user_input}])
+    raw = censor.run([{"role": "user", "content": f"REQUEST: {user_input}"}])
     result = json.loads(raw)
     if not result["pass"]:
         print(f"Hmm, I couldn't help with that — {result['feedback']} How about: \"{result['alternate']}\"?")
@@ -58,7 +58,7 @@ def main():
         return
 
     print("Final safety check on the story...")
-    raw = censor.run([{"role": "user", "content": story}])
+    raw = censor.run([{"role": "user", "content": f"STORY: {story}"}])
     result = json.loads(raw)
     if not result["pass"]:
         print("Could not generate a story for that prompt; please try a different one.")
