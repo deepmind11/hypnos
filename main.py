@@ -28,6 +28,7 @@ def main():
         return
 
     print("Writing the story...")
+    user_prompt_history = [user_input]
     writer_messages = [{"role": "user", "content": user_input}]
     judge_messages = []
     story = None
@@ -36,9 +37,10 @@ def main():
         writer_messages.append({"role": "assistant", "content": draft})
 
         print(f"Judging draft {i + 1}...")
+        prompts_block = "\n".join(f"{n + 1}. {p}" for n, p in enumerate(user_prompt_history))
         judge_messages.append({
             "role": "user",
-            "content": f"User request: {user_input}\n\nDraft to evaluate:\n\n{draft}",
+            "content": f"User requests so far (in order):\n{prompts_block}\n\nDraft to evaluate:\n\n{draft}",
         })
         raw = judge.run(judge_messages)
         judge_messages.append({"role": "assistant", "content": raw})
