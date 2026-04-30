@@ -36,9 +36,9 @@ Tracks what to build, in order. Each phase = a separate commit.
 
 ## Phase 4 — Story state & user revision
 
-- [ ] Add the `Current Story State` shared object + a `user_prompt_history` list.
-- [ ] Allow the user to ask for changes after delivery → kick off another W↔J round (counter resets).
-- [ ] Pass the full `user_prompt_history` to the Judge alongside the current draft so it can evaluate against every request the user has made.
+- [x] Add the `Current Story State` shared object + a `user_prompt_history` list.
+- [x] Allow the user to ask for changes after delivery → kick off another W↔J round (counter resets).
+- [x] Pass the full `user_prompt_history` to the Judge alongside the current draft so it can evaluate against every request the user has made.
 
 ## Phase 5 — Iteration
 
