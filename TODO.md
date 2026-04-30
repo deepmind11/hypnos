@@ -14,7 +14,7 @@ Tracks what to build, in order. Each phase = a separate commit.
 
 - [x] **Tracing** — stdout + JSONL trace file. Zero cloud. Langfuse deferred.
 - [x] **Eval** — pytest suite under `tests/`.
-- [x] **Schema validation** — OpenAI JSON mode + Pydantic models for each agent's response.
+- [x] **Schema validation** — OpenAI JSON mode only for now. Parse with `json.loads`. Pydantic deferred (see deferred section).
 - [x] **Per-session token budget** — 50,000 tokens (cumulative across all agent calls in one user request). ~3× worst-case headroom.
 - [x] **Counter-reset semantics** — Writer→Judge round = +1. Reset to 0 only on Censor rejection or user revision. Cap = 3 → abort.
 
@@ -55,6 +55,7 @@ Tracks what to build, in order. Each phase = a separate commit.
 - Logging / observability layer for the multi-agent flow (during dev: just print each agent's I/O).
 - Evaluation harness with a fixed set of test prompts.
 - External data sources (none planned).
+- Pydantic schema validation for agent responses (currently raw `json.loads`).
 
 ## Notes — story structure for ages 5–10
 
