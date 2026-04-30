@@ -40,14 +40,15 @@ def main():
         user_input = input("What kind of story do you want to hear? ")
 
         print("Validating your request...")
-        raw = validator.run([{"role": "user", "content": f"INITIAL\n{user_input}"}])
+        validator_input = f"Current story: (none)\n\nUser input: {user_input}"
+        raw = validator.run([{"role": "user", "content": validator_input}])
         result = json.loads(raw)
         if not result["pass"]:
             print(f"Hmm, I couldn't help with that — {result['feedback']}")
             continue
 
         print("Checking content is age-appropriate...")
-        raw = censor.run([{"role": "user", "content": f"REQUEST: {user_input}"}])
+        raw = censor.run([{"role": "user", "content": user_input}])
         result = json.loads(raw)
         if not result["pass"]:
             print(f"Hmm, I couldn't help with that — {result['feedback']} How about: \"{result['alternate']}\"?")
@@ -64,7 +65,7 @@ def main():
             continue
 
         print("Final safety check on the story...")
-        raw = censor.run([{"role": "user", "content": f"STORY: {story}"}])
+        raw = censor.run([{"role": "user", "content": story}])
         result = json.loads(raw)
         if not result["pass"]:
             print("Could not generate a story for that prompt; please try a different one.")
@@ -79,7 +80,7 @@ def main():
                 break
 
             print("Validating your revision...")
-            validator_input = f"REVISION\nCurrent story:\n{current_story}\n\nUser request:\n{nxt}"
+            validator_input = f"Current story: {current_story}\n\nUser input: {nxt}"
             raw = validator.run([{"role": "user", "content": validator_input}])
             result = json.loads(raw)
             if not result["pass"]:
@@ -87,7 +88,7 @@ def main():
                 continue
 
             print("Checking content is age-appropriate...")
-            raw = censor.run([{"role": "user", "content": f"REQUEST: {nxt}"}])
+            raw = censor.run([{"role": "user", "content": nxt}])
             result = json.loads(raw)
             if not result["pass"]:
                 print(f"Hmm, I couldn't help with that — {result['feedback']} How about: \"{result['alternate']}\"?")
@@ -108,7 +109,7 @@ def main():
                 continue
 
             print("Final safety check on the revised story...")
-            raw = censor.run([{"role": "user", "content": f"STORY: {story}"}])
+            raw = censor.run([{"role": "user", "content": story}])
             result = json.loads(raw)
             if not result["pass"]:
                 print("Could not generate this revision; the previous story still stands. Try a different revision.")
