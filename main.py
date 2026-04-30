@@ -10,6 +10,31 @@ hours on this project:
 
 example_requests = "A story about a girl named Alice and her best friend Bob, who happens to be a cat."
 
+def writer_judge_loop(writer_messages, judge_messages, user_prompt_history):
+    for i in range(3):
+        draft = writer.run(writer_messages)
+        writer_messages.append({"role": "assistant", "content": draft})
+
+        print(f"Judging draft {i + 1}...")
+        prompts_block = "\n".join(f"{n + 1}. {p}" for n, p in enumerate(user_prompt_history))
+        judge_messages.append({
+            "role": "user",
+            "content": f"User requests so far (in order):\n{prompts_block}\n\nDraft to evaluate:\n\n{draft}",
+        })
+        raw = judge.run(judge_messages)
+        judge_messages.append({"role": "assistant", "content": raw})
+        result = json.loads(raw)
+        if result["pass"]:
+            return draft
+
+        print(f"Judge requested revisions: {result['feedback']}")
+        writer_messages.append({
+            "role": "user",
+            "content": f"Judge feedback: {result['feedback']}\n\nPlease revise the story.",
+        })
+    return None
+
+
 def main():
     user_input = input("What kind of story do you want to hear? ")
 
@@ -31,29 +56,7 @@ def main():
     user_prompt_history = [user_input]
     writer_messages = [{"role": "user", "content": user_input}]
     judge_messages = []
-    story = None
-    for i in range(3):
-        draft = writer.run(writer_messages)
-        writer_messages.append({"role": "assistant", "content": draft})
-
-        print(f"Judging draft {i + 1}...")
-        prompts_block = "\n".join(f"{n + 1}. {p}" for n, p in enumerate(user_prompt_history))
-        judge_messages.append({
-            "role": "user",
-            "content": f"User requests so far (in order):\n{prompts_block}\n\nDraft to evaluate:\n\n{draft}",
-        })
-        raw = judge.run(judge_messages)
-        judge_messages.append({"role": "assistant", "content": raw})
-        result = json.loads(raw)
-        if result["pass"]:
-            story = draft
-            break
-
-        print(f"Judge requested revisions: {result['feedback']}")
-        writer_messages.append({
-            "role": "user",
-            "content": f"Judge feedback: {result['feedback']}\n\nPlease revise the story.",
-        })
+    story = writer_judge_loop(writer_messages, judge_messages, user_prompt_history)
 
     if story is None:
         print("Could not generate a story for that prompt; please try a different one.")
