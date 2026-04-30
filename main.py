@@ -14,7 +14,7 @@ def main():
     user_input = input("What kind of story do you want to hear? ")
 
     print("Validating your request...")
-    raw = validator.run([{"role": "user", "content": user_input}])
+    raw = validator.run([{"role": "user", "content": f"INITIAL\n{user_input}"}])
     result = json.loads(raw)
     if not result["pass"]:
         print(f"Hmm, I couldn't help with that — {result['feedback']}")
