@@ -57,6 +57,13 @@ def main():
         print("Could not generate a story for that prompt; please try a different one.")
         return
 
+    print("Final safety check on the story...")
+    raw = censor.run([{"role": "user", "content": story}])
+    result = json.loads(raw)
+    if not result["pass"]:
+        print("Could not generate a story for that prompt; please try a different one.")
+        return
+
     print(story)
 
 if __name__ == "__main__":
