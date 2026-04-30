@@ -55,29 +55,40 @@ def process_input(user_input, current_story, user_prompt_history, judge_messages
     raw = censor.run([{"role": "user", "content": user_input}])
     result = json.loads(raw)
     if not result["pass"]:
-        print(f"Hmm, I couldn't help with that — {result['feedback']} How about: \"{result['alternate']}\"?")
+        print(f"Hmm, I couldn't help with that — {result['feedback']}")
         return None
 
     user_prompt_history.append(user_input)
-    if is_revision:
-        writer_messages = [
-            {"role": "user", "content": user_prompt_history[0]},
-            {"role": "assistant", "content": current_story},
-            {"role": "user", "content": f"Revise the story: {user_input}"},
-        ]
-    else:
-        writer_messages = [{"role": "user", "content": user_input}]
 
+    def build_writer_messages(safety_hint: str = "") -> list[dict]:
+        last = f"Revise the story: {user_input}" if is_revision else user_input
+        if safety_hint:
+            last += f"\n\n(Note: a previous attempt was flagged as inappropriate — {safety_hint}. Write a new, age-appropriate story that avoids this.)"
+        if is_revision:
+            return [
+                {"role": "user", "content": user_prompt_history[0]},
+                {"role": "assistant", "content": current_story},
+                {"role": "user", "content": last},
+            ]
+        return [{"role": "user", "content": last}]
+
+    writer_messages = build_writer_messages()
     print("Revising the story..." if is_revision else "Writing the story...")
-    story = writer_judge_loop(writer_messages, judge_messages, user_prompt_history)
-    if story is None:
-        print(failure_message)
-        return None
+    for attempt in range(2):
+        story = writer_judge_loop(writer_messages, judge_messages, user_prompt_history)
+        if story is None:
+            print(failure_message)
+            return None
 
-    print("Final safety check on the revised story..." if is_revision else "Final safety check on the story...")
-    raw = censor.run([{"role": "user", "content": story}])
-    result = json.loads(raw)
-    if not result["pass"]:
+        print("Final safety check on the revised story..." if is_revision else "Final safety check on the story...")
+        raw = censor.run([{"role": "user", "content": story}])
+        result = json.loads(raw)
+        if result["pass"]:
+            break
+
+        print(f"Safety check flagged the story: {result['feedback']} Writing a fresh story...")
+        writer_messages = build_writer_messages(safety_hint=result["feedback"])
+    else:
         print(failure_message)
         return None
 
