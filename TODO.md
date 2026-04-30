@@ -20,19 +20,19 @@ Tracks what to build, in order. Each phase = a separate commit.
 
 ## Phase 1 — Foundation (one commit)
 
-- [ ] Add a small `Agent` abstraction: wraps the OpenAI call, takes `system_prompt`, `temperature`, `model`. Replace the inline `call_model` in `main.py`.
+- [x] Add a small `Agent` abstraction: wraps the OpenAI call, takes `system_prompt`, `temperature`, `model`. Replace the inline `call_model` in `main.py`.
 
 ## Phase 2 — Single-shot agents (one commit each)
 
-- [ ] **Validator** — input → `{pass, message}`. Wire at input.
-- [ ] **Censor** — input → `{pass, reason}`. Wire after Validator on input. (Reuse for output later.)
-- [ ] **Writer** — prompt → story. Single shot, no Judge yet. Verify quality of single-shot output before adding the loop.
+- [x] **Validator** — input → `{pass, message}`. Wire at input.
+- [x] **Censor** — input → `{pass, reason}`. Wire after Validator on input. (Reuse for output later.)
+- [x] **Writer** — prompt → story. Single shot, no Judge yet. Verify quality of single-shot output before adding the loop.
 
 ## Phase 3 — Writer ↔ Judge loop
 
-- [ ] **Judge** — `(original prompt, current draft, prior feedback) → {approved, feedback}`. Single shot.
-- [ ] Wire Writer ↔ Judge with iteration cap + "could not generate" fallback.
-- [ ] Add Censor as the final gate on the approved story. On failure, re-enter the Writer ↔ Judge loop (known limitation; deferred).
+- [x] **Judge** — `(original prompt, current draft, prior feedback) → {approved, feedback}`. Single shot.
+- [x] Wire Writer ↔ Judge with iteration cap + "could not generate" fallback.
+- [x] Add Censor as the final gate on the approved story. On failure, re-enter the Writer ↔ Judge loop (known limitation; deferred).
 
 ## Phase 4 — Story state & user revision
 
