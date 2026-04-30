@@ -1,6 +1,6 @@
 import json
 
-from agents import validator, censor, writer
+from agents import validator, censor, writer, judge
 
 """
 Before submitting the assignment, describe here in a few sentences what you would have built next if you spent 2 more
@@ -28,7 +28,35 @@ def main():
         return
 
     print("Writing the story...")
-    story = writer.run([{"role": "user", "content": user_input}])
+    writer_messages = [{"role": "user", "content": user_input}]
+    judge_messages = []
+    story = None
+    for i in range(3):
+        draft = writer.run(writer_messages)
+        writer_messages.append({"role": "assistant", "content": draft})
+
+        print(f"Judging draft {i + 1}...")
+        judge_messages.append({
+            "role": "user",
+            "content": f"User request: {user_input}\n\nDraft to evaluate:\n\n{draft}",
+        })
+        raw = judge.run(judge_messages)
+        judge_messages.append({"role": "assistant", "content": raw})
+        result = json.loads(raw)
+        if result["pass"]:
+            story = draft
+            break
+
+        print(f"Judge requested revisions: {result['feedback']}")
+        writer_messages.append({
+            "role": "user",
+            "content": f"Judge feedback: {result['feedback']}\n\nPlease revise the story.",
+        })
+
+    if story is None:
+        print("Could not generate a story for that prompt; please try a different one.")
+        return
+
     print(story)
 
 if __name__ == "__main__":
