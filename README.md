@@ -91,3 +91,15 @@ logs/          — per-session JSONL logs of every agent call (gitignored)
 - **Model** is locked to `gpt-3.5-turbo` per the original assignment.
 - Every agent call is logged (full messages, response, token usage, latency) to `logs/<timestamp>.jsonl` for debugging.
 - API key lives in `.env` — never commit it. (`.env` is gitignored.)
+
+## Future plans
+
+If I had two more hours, I'd focus on:
+
+1. **Cleaner context handoff between agents** — auditing what each agent receives and pruning anything that isn't actually used for its job. Right now I'm not confident that's tight.
+
+2. **Decomposing the writing step.** The writer currently does outlining, character work, and prose in one shot. I'd split it into smaller agents (outliner → character developer → prose writer) so each layer is deliberate.
+
+3. **More validation.** I have content gates (validator/censor) but no structural checks on agent outputs — I'd add schema enforcement, length limits, and graceful handling when the model returns malformed JSON, so bad responses fail clearly instead of bubbling through.
+
+Hypothetical, probably more than two hours: a **judge-panel quality bar** — keep five strong reference bedtime stories, have a small panel of judges score each draft, and only ship if the writer's draft lands above the bottom half. Probably a better lever than fine-tuning, which isn't realistic in this time budget anyway.
