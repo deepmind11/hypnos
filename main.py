@@ -36,7 +36,7 @@ def writer_judge_loop(writer_messages, judge_messages, user_prompt_history):
     return None
 
 
-def process_input(user_input, current_story, user_prompt_history, judge_messages):
+def process_input(user_input, current_story, user_prompt_history, judge_messages, intake_log):
     is_revision = current_story is not None
     failure_message = (
         "Could not generate this revision; the previous story still stands. Try a different revision."
@@ -44,26 +44,38 @@ def process_input(user_input, current_story, user_prompt_history, judge_messages
         else "Could not generate a story for that prompt; please try a different one."
     )
 
+    turn = f"Current story: {current_story or '(none)'}\nUser input: {user_input}"
+    intake_log.append({"role": "user", "content": turn})
+
     print("Validating your revision..." if is_revision else "Validating your request...")
-    validator_input = f"Current story: {current_story or '(none)'}\n\nUser input: {user_input}"
-    raw = validator.run([{"role": "user", "content": validator_input}])
+    raw = validator.run(intake_log)
     result = json.loads(raw)
+    intake_log.append({"role": "assistant", "content": json.dumps({"agent": "validator", **result})})
     if not result["pass"]:
         print(f"Hmm, I couldn't help with that — {result['feedback']}")
         return None
 
     print("Checking content is age-appropriate...")
-    censor_input = f"Source: user request\n\n{user_input}"
-    raw = censor.run([{"role": "user", "content": censor_input}])
+    raw = censor.run(intake_log)
     result = json.loads(raw)
+    intake_log.append({"role": "assistant", "content": json.dumps({"agent": "censor", **result})})
     if not result["pass"]:
         print(f"Hmm, I couldn't help with that — {result['feedback']}")
         return None
 
-    user_prompt_history.append(user_input)
+    chain = [m["content"].split("\nUser input: ", 1)[1] for m in intake_log if m["role"] == "user"]
+    intake_log.clear()
+    if len(chain) > 1:
+        bullets = "\n".join(f"- {ui}" for ui in chain)
+        effective_user_input = (
+            f"The user refined their request through these turns (each refines the previous):\n{bullets}"
+        )
+    else:
+        effective_user_input = user_input
+    user_prompt_history.append(effective_user_input)
 
     def build_writer_messages(safety_hint: str = "") -> list[dict]:
-        last = f"Revise the story: {user_input}" if is_revision else user_input
+        last = f"Revise the story: {effective_user_input}" if is_revision else effective_user_input
         if safety_hint:
             last += f"\n\n(Note: a previous attempt was flagged as inappropriate — {safety_hint}. Write a new, age-appropriate story that avoids this.)"
         if is_revision:
@@ -100,22 +112,32 @@ def process_input(user_input, current_story, user_prompt_history, judge_messages
 
 
 def main():
+    pending_input = None
+    intake_log = []
     while True:
-        user_input = input("What kind of story do you want to hear? ")
+        if pending_input is None:
+            user_input = input("What kind of story do you want to hear? ")
+        else:
+            user_input, pending_input = pending_input, None
         user_prompt_history = []
         judge_messages = []
 
-        story = process_input(user_input, None, user_prompt_history, judge_messages)
+        story = process_input(user_input, None, user_prompt_history, judge_messages, intake_log)
         if story is None:
             continue
         current_story = story
 
         while True:
-            nxt = input("\nAny changes, or type '/new' to start a fresh story? ")
-            if nxt.strip() == "/new":
+            nxt = input("\nAny changes, or type '/new' to start a fresh story? ").strip()
+            if nxt == "/new":
+                intake_log.clear()
+                break
+            if nxt.startswith("/new "):
+                pending_input = nxt[len("/new "):].strip()
+                intake_log.clear()
                 break
 
-            story = process_input(nxt, current_story, user_prompt_history, judge_messages)
+            story = process_input(nxt, current_story, user_prompt_history, judge_messages, intake_log)
             if story is None:
                 continue
             current_story = story
