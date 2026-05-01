@@ -50,6 +50,15 @@ The four agents:
 
 The censor also runs a **final safety check** on the approved draft. If it flags the story, the writer restarts with a safety hint (up to 2 attempts).
 
+### Context management
+
+Each agent only sees what its job requires:
+
+- **Validator + Censor (intake)** share an `intake_log` so they can read follow-up turns in light of earlier rejections. The log is cleared the moment both approve.
+- **Writer** doesn't see the intake back-and-forth at all. It receives a clean prompt — or, if multiple user turns accumulated before approval, a single bullet-list message that captures the evolved intent. For revisions it also gets the previous story.
+- **Judge** keeps its own message history across writer→judge iterations so it remembers what it asked for. The judge's verbose `evaluation` field is logged for debugging but stripped before being fed back, to keep its context lean.
+- **Final censor** is single-shot — it judges the finished story standalone, with no history.
+
 ## Commands
 
 Inside the REPL:
