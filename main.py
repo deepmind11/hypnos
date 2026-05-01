@@ -1,118 +1,64 @@
-import json
-
-from agents import validator, censor, writer, judge
+from pipeline import validate_and_censor_input, combine_user_turns, write_story
 
 """
 Before submitting the assignment, describe here in a few sentences what you would have built next if you spent 2 more
 hours on this project:
 
+If I had two more hours, I'd focus on:
+
+1. Cleaner context handoff between agents — auditing what each agent receives
+   and pruning anything that isn't actually used for its job. Right now I'm
+   not confident that's tight.
+
+2. Decomposing the writing step. The writer currently does outlining,
+   character work, and prose in one shot. I'd split it into smaller agents
+   (outliner → character developer → prose writer) so each layer is deliberate.
+
+3. More validation. I have content gates (validator/censor) but no structural
+   checks on agent outputs — I'd add schema enforcement, length limits, and
+   graceful handling when the model returns malformed JSON, so bad responses
+   fail clearly instead of bubbling through.
+
+Hypothetical, probably more than two hours: a judge-panel quality bar — keep
+five strong reference bedtime stories, have a small panel of judges score
+each draft, and only ship if the writer's draft lands above the bottom half.
+Probably a better lever than fine-tuning, which isn't realistic in this
+time budget anyway.
 """
 
-example_requests = "A story about a girl named Alice and her best friend Bob, who happens to be a cat."
 
-def writer_judge_loop(writer_messages, judge_messages, user_prompt_history):
-    for i in range(3):
-        draft = writer.run(writer_messages)
-        writer_messages.append({"role": "assistant", "content": draft})
+def process_user_request(user_input, current_story, user_prompt_history, judge_messages, intake_log):
+    """Run one user turn through the full pipeline.
 
-        print(f"Judging draft {i + 1}...")
-        prompts_block = "\n".join(f"{n + 1}. {p}" for n, p in enumerate(user_prompt_history))
-        judge_messages.append({
-            "role": "user",
-            "content": f"User requests so far (in order):\n{prompts_block}\n\nDraft to evaluate:\n\n{draft}",
-        })
-        raw = judge.run(judge_messages)
-        result = json.loads(raw)
-        slim = json.dumps({"pass": result["pass"], "feedback": result.get("feedback", "")})
-        judge_messages.append({"role": "assistant", "content": slim})
-        if result["pass"]:
-            return draft
-
-        print(f"Judge requested revisions: {result['feedback']}")
-        writer_messages.append({
-            "role": "user",
-            "content": f"Judge feedback: {result['feedback']}\n\nPlease revise the story.",
-        })
-    return None
-
-
-def process_input(user_input, current_story, user_prompt_history, judge_messages, intake_log):
+    Pipeline: validate_and_censor_input → combine_user_turns → write_story.
+    Returns the approved story, or None if any stage failed.
+    """
     is_revision = current_story is not None
-    failure_message = (
-        "Could not generate this revision; the previous story still stands. Try a different revision."
-        if is_revision
-        else "Could not generate a story for that prompt; please try a different one."
-    )
 
-    turn = f"Current story: {current_story or '(none)'}\nUser input: {user_input}"
-    intake_log.append({"role": "user", "content": turn})
-
-    print("Validating your revision..." if is_revision else "Validating your request...")
-    raw = validator.run(intake_log)
-    result = json.loads(raw)
-    intake_log.append({"role": "assistant", "content": json.dumps({"agent": "validator", **result})})
-    if not result["pass"]:
-        print(f"Hmm, I couldn't help with that — {result['feedback']}")
+    # Run validator → censor on the input. They share intake_log so they can
+    # interpret follow-ups after a rejection.
+    if not validate_and_censor_input(user_input, current_story, intake_log, is_revision):
         return None
 
-    print("Checking content is age-appropriate...")
-    raw = censor.run(intake_log)
-    result = json.loads(raw)
-    intake_log.append({"role": "assistant", "content": json.dumps({"agent": "censor", **result})})
-    if not result["pass"]:
-        print(f"Hmm, I couldn't help with that — {result['feedback']}")
-        return None
-
-    chain = [m["content"].split("\nUser input: ", 1)[1] for m in intake_log if m["role"] == "user"]
-    intake_log.clear()
-    if len(chain) > 1:
-        bullets = "\n".join(f"- {ui}" for ui in chain)
-        effective_user_input = (
-            f"The user refined their request through these turns (each refines the previous):\n{bullets}"
-        )
-    else:
-        effective_user_input = user_input
+    # If multiple turns accumulated before approval, merge them into one
+    # combined message for the writer; clears the intake log.
+    effective_user_input = combine_user_turns(intake_log, user_input)
     user_prompt_history.append(effective_user_input)
 
-    def build_writer_messages(safety_hint: str = "") -> list[dict]:
-        last = f"Revise the story: {effective_user_input}" if is_revision else effective_user_input
-        if safety_hint:
-            last += f"\n\n(Note: a previous attempt was flagged as inappropriate — {safety_hint}. Write a new, age-appropriate story that avoids this.)"
-        if is_revision:
-            return [
-                {"role": "user", "content": user_prompt_history[0]},
-                {"role": "assistant", "content": current_story},
-                {"role": "user", "content": last},
-            ]
-        return [{"role": "user", "content": last}]
-
-    writer_messages = build_writer_messages()
-    print("Revising the story..." if is_revision else "Writing the story...")
-    for attempt in range(2):
-        story = writer_judge_loop(writer_messages, judge_messages, user_prompt_history)
-        if story is None:
-            print(failure_message)
-            return None
-
-        print("Final safety check on the revised story..." if is_revision else "Final safety check on the story...")
-        censor_input = f"Source: writer story\n\n{story}"
-        raw = censor.run([{"role": "user", "content": censor_input}])
-        result = json.loads(raw)
-        if result["pass"]:
-            break
-
-        print(f"Safety check flagged the story: {result['feedback']} Writing a fresh story...")
-        writer_messages = build_writer_messages(safety_hint=result["feedback"])
-    else:
-        print(failure_message)
-        return None
-
-    print(story)
-    return story
+    # Run writer/judge + final censor with up to 2 safety-hint retries.
+    return write_story(effective_user_input, current_story, user_prompt_history, judge_messages, is_revision)
 
 
 def main():
+    """Interactive REPL: prompt for a story, then accept revisions or /new commands.
+
+    Commands:
+      /new        — start a fresh story
+      /new <text> — start a fresh story with <text> as the first prompt
+    """
+    # Holds text after `/new <text>` so the next iteration uses it without re-prompting.
     pending_input = None
+    # Persists across rejected turns; cleared on /new or after both gates approve.
     intake_log = []
     while True:
         if pending_input is None:
@@ -122,7 +68,7 @@ def main():
         user_prompt_history = []
         judge_messages = []
 
-        story = process_input(user_input, None, user_prompt_history, judge_messages, intake_log)
+        story = process_user_request(user_input, None, user_prompt_history, judge_messages, intake_log)
         if story is None:
             continue
         current_story = story
@@ -137,7 +83,7 @@ def main():
                 intake_log.clear()
                 break
 
-            story = process_input(nxt, current_story, user_prompt_history, judge_messages, intake_log)
+            story = process_user_request(nxt, current_story, user_prompt_history, judge_messages, intake_log)
             if story is None:
                 continue
             current_story = story
