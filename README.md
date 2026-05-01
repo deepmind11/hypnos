@@ -25,10 +25,10 @@ python main.py
 
 ```mermaid
 flowchart TD
-    User([User]) -->|story request or revision| Validator
-    Validator -.->|reject: off-topic / gibberish| User
+    User([User]) -->|story request| Validator
+    Validator -.->|reject| User
     Validator -->|approve| Censor1[Censor: intake check]
-    Censor1 -.->|reject: unsafe content| User
+    Censor1 -.->|reject| User
     Censor1 -->|approve| Writer
 
     Writer -->|draft| Judge
