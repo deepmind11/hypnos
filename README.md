@@ -94,7 +94,7 @@ logs/          — per-session JSONL logs of every agent call (gitignored)
 
 ## Future plans
 
-If I had two more hours, I'd focus on:
+Things I'd build next:
 
 1. **Cleaner context handoff between agents** — auditing what each agent receives and pruning anything that isn't actually used for its job. Right now I'm not confident that's tight.
 
@@ -102,4 +102,4 @@ If I had two more hours, I'd focus on:
 
 3. **More validation.** I have content gates (validator/censor) but no structural checks on agent outputs — I'd add schema enforcement, length limits, and graceful handling when the model returns malformed JSON, so bad responses fail clearly instead of bubbling through.
 
-Hypothetical, probably more than two hours: a **judge-panel quality bar** — keep five strong reference bedtime stories, have a small panel of judges score each draft, and only ship if the writer's draft lands above the bottom half. Probably a better lever than fine-tuning, which isn't realistic in this time budget anyway.
+A more speculative direction: a **judge-panel quality bar** — keep five strong reference bedtime stories, have a small panel of judges score each draft, and only ship if the writer's draft lands above the bottom half. Probably a better lever than fine-tuning.
