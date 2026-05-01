@@ -41,7 +41,7 @@ flowchart TD
 
 Solid arrows = pass-through; dotted arrows = rejection paths.
 
-The four agents:
+The four agents (system prompts available in `agents.py`):
 
 1. **Validator** — confirms the user is engaging with the story chatbot (rejects off-topic, gibberish, or prompt-injection attempts). Permissive on themes — content safety is the censor's job.
 2. **Censor (intake)** — gates user input for child-appropriateness. Shares an intake log with the validator so it can interpret follow-ups after a rejection (e.g. "with a parachute, on his birthday" after "thrown out of a plane" reframes the request as safe).
@@ -82,7 +82,6 @@ main.py        — REPL + orchestrator (process_user_request)
 pipeline.py    — pipeline helpers (validate_and_censor_input, combine_user_turns, write_story, writer_judge_loop)
 agent.py       — Agent class wrapping the OpenAI API
 agents.py      — Agent instances and system prompts
-ASSIGNMENT.md  — original assignment brief
 logs/          — per-session JSONL logs of every agent call (gitignored)
 ```
 
