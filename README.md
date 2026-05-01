@@ -102,4 +102,7 @@ Things I'd build next:
 
 3. **More validation.** I have content gates (validator/censor) but no structural checks on agent outputs — I'd add schema enforcement, length limits, and graceful handling when the model returns malformed JSON, so bad responses fail clearly instead of bubbling through.
 
-A more speculative direction: a **judge-panel quality bar** — keep five strong reference bedtime stories, have a small panel of judges score each draft, and only ship if the writer's draft lands above the bottom half. Probably a better lever than fine-tuning.
+Two more speculative directions:
+
+- **Judge-panel quality bar** — keep five strong reference bedtime stories, have a small panel of judges score each draft, and only ship if the writer's draft lands above the bottom half.
+- **Fine-tuning the model** on a corpus of children's bedtime stories so it sounds more like one out of the box, before any judging or revision.

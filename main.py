@@ -22,8 +22,8 @@ If I had two more hours, I'd focus on:
 Hypothetical, probably more than two hours: a judge-panel quality bar — keep
 five strong reference bedtime stories, have a small panel of judges score
 each draft, and only ship if the writer's draft lands above the bottom half.
-Probably a better lever than fine-tuning, which isn't realistic in this
-time budget anyway.
+Fine-tuning the model to sound more like a children's bedtime story is
+another option, but it can't be done in two hours.
 """
 
 
