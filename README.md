@@ -52,12 +52,19 @@ The censor also runs a **final safety check** on the approved draft. If it flags
 
 ### Context management
 
-Each agent only sees what its job requires:
+Each agent only sees what it needs for the job in front of it. This was the most thought-out part of the design.
 
-- **Validator + Censor (intake)** share an `intake_log` so they can read follow-up turns in light of earlier rejections. The log is cleared the moment both approve.
-- **Writer** doesn't see the intake back-and-forth at all. It receives a clean prompt — or, if multiple user turns accumulated before approval, a single bullet-list message that captures the evolved intent. For revisions it also gets the previous story.
-- **Judge** keeps its own message history across writer→judge iterations so it remembers what it asked for. The judge's verbose `evaluation` field is logged for debugging but stripped before being fed back, to keep its context lean.
-- **Final censor** is single-shot — it judges the finished story standalone, with no history.
+**Validator + Censor (intake).** Both share an `intake_log` — the user's turns from the current intake session plus their own prior verdicts. Sharing lets them read a follow-up like "with a parachute, on his birthday" as a clarification of an earlier rejected "thrown out of a plane" instead of judging each turn in isolation. Each turn also carries the current story so they can disambiguate revision requests like "make him a robot". As soon as both approve, the log is wiped.
+
+**Writer.** Sees only what it needs to write the next draft. For a fresh story, one user message — either the prompt itself or, if it took multiple intake turns to get past the gates, a bullet-list combining them. For a revision, three messages: the original prompt, the current approved story, and the new revision request. During the writer-judge back-and-forth, each draft and each piece of judge feedback are appended in order, so the writer iterates against its own prior attempts and the judge's running critique.
+
+**Judge.** Keeps a running conversation across iterations within a single writer-judge attempt so it remembers what it asked for and can check whether the writer addressed it. Each new attempt — whether a fresh story or a user revision — starts with empty judge memory, but always receives the rolling list of all user requests so far (initial + every revision) so it can evaluate the draft against the user's full intent. The verbose `evaluation` field the judge produces is stripped before being fed back — kept in logs for debugging, not in its own context.
+
+**Censor (final safety check).** Stateless, single-shot. Receives just the story plus a `Source: writer story` label telling it which safety criteria to apply (it treats user input differently from writer output). Judging the story in isolation prevents earlier intake chatter from biasing the final check.
+
+**Iteration loops.** The **writer-judge loop** runs up to 3 times, with the judge's feedback feeding into the writer's next draft. An **outer safety loop** wraps that and runs up to 2 times, restarting the writer-judge cycle with a safety hint each time the final censor flags the resulting story.
+
+**A note on growing context.** The iteration caps above keep a single attempt bounded, but the rolling user-prompt list still grows across a long revision session. There's no compaction yet — for longer sessions we'd summarize older entries into a brief recap.
 
 ## Commands
 

@@ -83,6 +83,7 @@ def main():
                 intake_log.clear()
                 break
 
+            judge_messages.clear()  # fresh judge session per revision
             story = process_user_request(nxt, current_story, user_prompt_history, judge_messages, intake_log)
             if story is None:
                 continue
