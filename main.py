@@ -52,7 +52,8 @@ def process_input(user_input, current_story, user_prompt_history, judge_messages
         return None
 
     print("Checking content is age-appropriate...")
-    raw = censor.run([{"role": "user", "content": user_input}])
+    censor_input = f"Source: user request\n\n{user_input}"
+    raw = censor.run([{"role": "user", "content": censor_input}])
     result = json.loads(raw)
     if not result["pass"]:
         print(f"Hmm, I couldn't help with that — {result['feedback']}")
@@ -81,7 +82,8 @@ def process_input(user_input, current_story, user_prompt_history, judge_messages
             return None
 
         print("Final safety check on the revised story..." if is_revision else "Final safety check on the story...")
-        raw = censor.run([{"role": "user", "content": story}])
+        censor_input = f"Source: writer story\n\n{story}"
+        raw = censor.run([{"role": "user", "content": censor_input}])
         result = json.loads(raw)
         if result["pass"]:
             break
