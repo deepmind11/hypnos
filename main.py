@@ -22,8 +22,9 @@ def writer_judge_loop(writer_messages, judge_messages, user_prompt_history):
             "content": f"User requests so far (in order):\n{prompts_block}\n\nDraft to evaluate:\n\n{draft}",
         })
         raw = judge.run(judge_messages)
-        judge_messages.append({"role": "assistant", "content": raw})
         result = json.loads(raw)
+        slim = json.dumps({"pass": result["pass"], "feedback": result.get("feedback", "")})
+        judge_messages.append({"role": "assistant", "content": slim})
         if result["pass"]:
             return draft
 

@@ -171,10 +171,10 @@ to rewrite the story, and submit it for another review.
 
 
 Respond with a JSON object exactly matching this shape:
-{"pass": <true|false>, "feedback": "Specific feedback explaining the issues and how to improve the story."}
+{"pass": <true|false>, "feedback": "Specific feedback explaining the issues and how to improve the story.", "evaluation": "A longer rubric-by-rubric explanation of why you passed or failed the draft."}
 
-On pass: feedback can be empty.
-On fail: feedback must name the specific issues (which rubric items, overall feel) and tell the writer what to change. Keep it under 3 sentences.
+On pass: feedback can be empty. evaluation should still be filled in.
+On fail: feedback must name the specific issues (which rubric items, overall feel) and tell the writer what to change. Keep it under 3 sentences. evaluation should expand on the reasoning behind the rubric scores.
 """
 
 judge = Agent(
